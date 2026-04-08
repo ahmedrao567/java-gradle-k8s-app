@@ -16,7 +16,7 @@ public class App {
 
     static class MyHandler implements HttpHandler {
         public void handle(HttpExchange t) throws IOException {
-            String response = "Hello from Gradle bJava App running in Kubernetes for testing!";
+            String response = "Hello from Gradle bJava App running in Kubernetes for testing .!";
             t.sendResponseHeaders(200, response.length());
             OutputStream os = t.getResponseBody();
             os.write(response.getBytes());
