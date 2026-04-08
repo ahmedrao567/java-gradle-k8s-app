@@ -1,5 +1,5 @@
 # Use lightweight Java 17 runtime
-FROM eclipse-temurin:17-jdk-jammy
+FROM eclipse-temurin:21-jdk-jammy
 
 # Set working directory
 WORKDIR /app
@@ -7,5 +7,5 @@ WORKDIR /app
 # Copy the built JAR from Gradle build output
 COPY build/libs/java-gradle-k8s-app-1.0.jar app.jar
 
-# Run the application
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+# Run the application and keep container alive
+CMD ["sh", "-c", "java -jar /app/app.jar; tail -f /dev/null"]
