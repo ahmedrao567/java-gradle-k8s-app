@@ -13,7 +13,7 @@ public class App {
             Socket client = serverSocket.accept();
             PrintWriter out = new PrintWriter(client.getOutputStream(), true);
 
-            String body = "Hello from simple Java App running in Kubernetes!";
+            String body = "Hello from simple Java App running in Kubernetess!";
             String response = "HTTP/1.1 200 OK\r\n" +
                               "Content-Type: text/plain\r\n" +
                               "Content-Length: " + body.length() + "\r\n" +
