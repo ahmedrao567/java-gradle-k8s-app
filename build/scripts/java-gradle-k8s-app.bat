@@ -72,7 +72,7 @@ set CLASSPATH=%APP_HOME%\lib\java-gradle-k8s-app-1.0.jar
 
 
 @rem Execute java-gradle-k8s-app
-"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %JAVA_GRADLE_K8S_APP_OPTS%  -classpath "%CLASSPATH%" com.example.App %*
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %JAVA_GRADLE_K8S_APP_OPTS%  -classpath "%CLASSPATH%" App %*
 
 :end
 @rem End local scope for the variables with windows NT shell

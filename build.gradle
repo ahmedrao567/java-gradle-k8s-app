@@ -14,14 +14,14 @@ java {
 }
 
 application {
-    mainClass = 'com.example.App'
+    mainClass = 'App' // updated for default package
 }
 
 // Fat JAR configuration
 jar {
     manifest {
         attributes(
-            'Main-Class': 'com.example.App'
+            'Main-Class': 'App' // updated for default package
         )
     }
     from {
