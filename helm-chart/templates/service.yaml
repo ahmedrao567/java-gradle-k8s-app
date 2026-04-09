@@ -12,3 +12,4 @@ spec:
     - port: 80           # the port you access from other pods or port-forward
       targetPort: 8081   # must match containerPort in deployment
       protocol: TCP
+      
