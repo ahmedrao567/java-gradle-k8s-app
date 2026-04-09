@@ -17,10 +17,14 @@ application {
     mainClass = 'com.example.App'
 }
 
+// Fat JAR configuration
 jar {
     manifest {
         attributes(
             'Main-Class': 'com.example.App'
         )
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
