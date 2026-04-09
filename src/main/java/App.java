@@ -17,7 +17,7 @@ public class App {
                               "Content-Type: text/plain\r\n" +
                               "Content-Length: 60\r\n" +
                               "\r\n" +
-                              "Hello from simple Java App running in Kubernetes!";
+                              "Hello from simple Java App running in Kubernetes!d";
             
             out.print(response);
             out.flush();
