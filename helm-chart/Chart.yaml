@@ -1,0 +1,4 @@
+apiVersion: v2
+name: java-gradle-k8s-app
+version: 0.1.0
+appVersion: "1.0"

@@ -1,0 +1,4 @@
+image:
+  repository: ahmedikram567/java-gradle-k8s-app
+  tag: latest
+replicaCount: 1
