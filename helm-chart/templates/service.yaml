@@ -9,7 +9,6 @@ spec:
   selector:
     app: {{ .Release.Name }}
   ports:
-    - port: 80           # the port you access from other pods or port-forward
-      targetPort: 8081   # must match containerPort in deployment
+    - port: 80          
+      targetPort: 8081   
       protocol: TCP
-      
