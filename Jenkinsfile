@@ -41,6 +41,19 @@ pipeline {
             }
         }
 
+        stage('Deploy PostgreSQL (Helm)') {
+            steps {
+                deployPostgresChart(
+                    'postgres',
+                    env.REMOTE_HOST,
+                    env.MAC_USER,
+                    env.SSH_KEY,
+                    env.HELM_CHART_DIR,
+                    env.K8S_NAMESPACE
+                )
+            }
+        }
+
         stage('Deploy (Helm)') {
             steps {
                 deployHelmChart(

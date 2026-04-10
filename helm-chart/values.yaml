@@ -2,3 +2,10 @@ image:
   repository: ahmedikram567/java-gradle-k8s-app
   tag: latest
 replicaCount: 1
+
+database:
+  host: postgres-postgresql
+  port: 5432
+  name: appdb
+  username: appuser
+  password: apppassword
