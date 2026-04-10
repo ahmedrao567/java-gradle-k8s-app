@@ -1,6 +1,7 @@
 plugins {
     id 'java'
-    id 'application'
+    id 'org.springframework.boot' version '3.3.4'
+    id 'io.spring.dependency-management' version '1.1.6'
     id "org.sonarqube" version "4.3.0.3225"
 }
 
@@ -13,18 +14,16 @@ java {
     }
 }
 
-application {
-    mainClass = 'App' // updated for default package
+repositories {
+    mavenCentral()
 }
 
-// Fat JAR configuration
-jar {
-    manifest {
-        attributes(
-            'Main-Class': 'App' // updated for default package
-        )
-    }
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-    }
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
