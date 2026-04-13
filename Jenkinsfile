@@ -23,7 +23,7 @@ pipeline {
             }
         }
 
-        stage('Build (Gradle/Maven)') {
+        stage('Build (Gradle)') {
             steps {
                 buildApp()
             }
