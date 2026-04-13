@@ -1,6 +1,3 @@
 def call() {
-    sh '''
-        chmod +x gradlew
-        ./gradlew clean build
-    '''
+    sh 'chmod +x gradlew && ./gradlew clean build'
 }

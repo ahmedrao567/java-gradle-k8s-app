@@ -9,15 +9,17 @@ def call(
 ) {
     String chartDir = './helm-chart'
     String imageTag = 'latest'
-    String helmBinary = '/Users/airao/.rd/bin/helm'
+    String helmBinary = env.HELM_BINARY ?: '/Users/airao/.rd/bin/helm'
+    String sshOptions = "-i ${sshKey} -o StrictHostKeyChecking=no"
+    String remote = "${remoteUser}@${remoteHost}"
 
     sh """
-        ssh -i ${sshKey} -o StrictHostKeyChecking=no ${remoteUser}@${remoteHost} 'mkdir -p ${remoteChartDir}'
+        ssh ${sshOptions} ${remote} 'mkdir -p ${remoteChartDir}'
 
-        rsync -avz -e "ssh -i ${sshKey} -o StrictHostKeyChecking=no" \
-            ${chartDir}/ ${remoteUser}@${remoteHost}:${remoteChartDir}/
+        rsync -avz -e "ssh ${sshOptions}" \
+            ${chartDir}/ ${remote}:${remoteChartDir}/
 
-        ssh -i ${sshKey} -o StrictHostKeyChecking=no ${remoteUser}@${remoteHost} \
+        ssh ${sshOptions} ${remote} \
             "${helmBinary} upgrade --install ${release} ${remoteChartDir} \
             --namespace ${namespace} \
             --set image.repository=${imageRepository} \

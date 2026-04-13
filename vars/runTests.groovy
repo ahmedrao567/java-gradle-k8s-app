@@ -1,6 +1,3 @@
 def call() {
-    sh '''
-        chmod +x gradlew
-        ./gradlew test
-    '''
+    sh 'chmod +x gradlew && ./gradlew test'
 }
