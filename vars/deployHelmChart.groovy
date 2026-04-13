@@ -24,7 +24,9 @@ def call(
             --set image.repository=${imageRepository} \
             --set image.tag=${imageTag} && \
             KCTL=${kubectlBinary} && [ -x \$KCTL ] || KCTL=kubectl && \
-            (pkill -f "\$KCTL -n ${namespace} port-forward svc/${release} 8081:80" || true) && \
-            nohup \$KCTL -n ${namespace} port-forward svc/${release} 8081:80 > /tmp/${release}-port-forward.log 2>&1 &"
+            \$KCTL -n ${namespace} rollout status deployment/${release} --timeout=180s && \
+            (pkill -f \"port-forward .*deployment/${release} 8081:8081\" || true) && \
+            nohup \$KCTL -n ${namespace} port-forward deployment/${release} 8081:8081 > /tmp/${release}-port-forward.log 2>&1 & \
+            sleep 2 && pgrep -af \"port-forward .*deployment/${release} 8081:8081\""
     """
 }
