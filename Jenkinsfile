@@ -35,6 +35,14 @@ pipeline {
             }
         }
 
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh './gradlew sonar'
+                }
+            }
+        }
+
         stage('Docker Build & Push') {
             steps {
                 buildDockerImage(env.DOCKER_IMAGE, env.DOCKER_CREDS)
