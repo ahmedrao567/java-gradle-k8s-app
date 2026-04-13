@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Message Board</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --panel: #fffdf8;
+      --text: #1f2a37;
+      --accent: #0b7a75;
+      --border: #d8cfc2;
+      --muted: #6b7280;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 20%, #f8d9b6 0%, transparent 35%),
+        radial-gradient(circle at 90% 80%, #c7efe6 0%, transparent 30%),
+        var(--bg);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: min(760px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.8rem;
+      letter-spacing: 0.3px;
+    }
+
+    p {
+      margin: 0 0 18px;
+      color: var(--muted);
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    input {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 1rem;
+      width: 100%;
+      background: #ffffff;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #ffffff;
+      cursor: pointer;
+    }
+
+    .status {
+      min-height: 22px;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    li {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 640px) {
+      form {
+        grid-template-columns: 1fr;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>Message Board</h1>
+    <p>Send and receive messages from PostgreSQL.</p>
+
+    <form id="messageForm">
+      <input id="content" name="content" type="text" placeholder="Write a message" required>
+      <button type="submit">Send</button>
+    </form>
+
+    <div class="status" id="status"></div>
+    <ul id="messages"></ul>
+  </main>
+
+  <script>
+    const form = document.getElementById('messageForm');
+    const input = document.getElementById('content');
+    const statusEl = document.getElementById('status');
+    const messagesEl = document.getElementById('messages');
+
+    async function loadMessages() {
+      try {
+        const response = await fetch('/messages');
+        if (!response.ok) {
+          throw new Error('Failed to load messages');
+        }
+
+        const items = await response.json();
+        messagesEl.innerHTML = '';
+
+        if (!items.length) {
+          messagesEl.innerHTML = '<li>No messages yet.</li>';
+          return;
+        }
+
+        for (const item of items) {
+          const li = document.createElement('li');
+          const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString() : 'unknown time';
+          li.innerHTML = `<div>${item.content}</div><div class="meta">id: ${item.id} | ${createdAt}</div>`;
+          messagesEl.appendChild(li);
+        }
+      } catch (error) {
+        statusEl.textContent = error.message;
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      statusEl.textContent = 'Sending...';
+
+      try {
+        const response = await fetch('/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: input.value })
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || 'Send failed');
+        }
+
+        input.value = '';
+        statusEl.textContent = 'Message saved.';
+        await loadMessages();
+      } catch (error) {
+        statusEl.textContent = error.message;
+      }
+    });
+
+    loadMessages();
+  </script>
+</body>
+</html>
