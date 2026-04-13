@@ -18,7 +18,7 @@ def call(
         ssh -i ${sshKey} -o StrictHostKeyChecking=no ${remoteUser}@${remoteHost} \
             "${helmBinary} repo add bitnami https://charts.bitnami.com/bitnami || true && \
             ${helmBinary} repo update && \
-            ${helmBinary} upgrade --install ${release} bitnami/postgresql \
+            ${helmBinary} upgrade --install ${release} postgresql --repo https://charts.bitnami.com/bitnami \
             -f ${remoteChartDir}/postgres-values.yaml \
             --namespace ${namespace} \
             --create-namespace"
