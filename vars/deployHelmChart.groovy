@@ -10,7 +10,6 @@ def call(
     String chartDir = './helm-chart'
     String imageTag = 'latest'
     String helmBinary = '/Users/airao/.rd/bin/helm'
-    String kubectlBinary = '/Users/airao/.rd/bin/kubectl'
 
     sh """
         ssh -i ${sshKey} -o StrictHostKeyChecking=no ${remoteUser}@${remoteHost} 'mkdir -p ${remoteChartDir}'
@@ -22,11 +21,6 @@ def call(
             "${helmBinary} upgrade --install ${release} ${remoteChartDir} \
             --namespace ${namespace} \
             --set image.repository=${imageRepository} \
-            --set image.tag=${imageTag} && \
-            KCTL=${kubectlBinary} && [ -x \$KCTL ] || KCTL=kubectl && \
-            \$KCTL -n ${namespace} rollout status deployment/${release} --timeout=180s && \
-            (pkill -f \"port-forward .*deployment/${release} 8081:8081\" || true) && \
-            nohup \$KCTL -n ${namespace} port-forward deployment/${release} 8081:8081 > /tmp/${release}-port-forward.log 2>&1 & \
-            sleep 2 && pgrep -af \"port-forward .*deployment/${release} 8081:8081\""
+            --set image.tag=${imageTag}"
     """
 }
