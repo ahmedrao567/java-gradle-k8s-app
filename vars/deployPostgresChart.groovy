@@ -16,7 +16,10 @@ def call(
             ${chartDir}/ ${remoteUser}@${remoteHost}:${remoteChartDir}/
 
         ssh -i ${sshKey} -o StrictHostKeyChecking=no ${remoteUser}@${remoteHost} \
-            "${helmBinary} repo add bitnami https://charts.bitnami.com/bitnami || true && \
+            "export DOCKER_CONFIG=/tmp/helm-docker-config && \
+            mkdir -p \$DOCKER_CONFIG && \
+            printf '{\"auths\":{}}' > \$DOCKER_CONFIG/config.json && \
+            ${helmBinary} repo add bitnami https://charts.bitnami.com/bitnami || true && \
             ${helmBinary} repo update && \
             ${helmBinary} upgrade --install ${release} postgresql --repo https://charts.bitnami.com/bitnami \
             -f ${remoteChartDir}/postgres-values.yaml \
