@@ -72,8 +72,7 @@ jobs:
       - name: Deploy PostgreSQL with Helm
         run: |
           ssh ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} << 'EOF'
-          export PATH=/usr/local/bin:$PATH
-          helm upgrade --install postgres ${{ env.HELM_CHART_DIR }} \
+          /Users/airao/.rd/bin/helm upgrade --install postgres ${{ env.HELM_CHART_DIR }} \
             -f ${{ env.HELM_CHART_DIR }}/postgres-values.yaml \
             -n ${{ env.K8S_NAMESPACE }} \
             --create-namespace
@@ -82,8 +81,7 @@ jobs:
       - name: Deploy app with Helm
         run: |
           ssh ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} << 'EOF'
-          export PATH=/usr/local/bin:$PATH
-          helm upgrade --install ${{ env.HELM_RELEASE }} ${{ env.HELM_CHART_DIR }} \
+          /Users/airao/.rd/bin/helm upgrade --install ${{ env.HELM_RELEASE }} ${{ env.HELM_CHART_DIR }} \
             --set image.tag=${{ github.sha }} \
             -n ${{ env.K8S_NAMESPACE }} \
             --create-namespace
