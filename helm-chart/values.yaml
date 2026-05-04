@@ -4,7 +4,7 @@ image:
 replicaCount: 1
 
 database:
-  host: postgres-postgresql
+  host: my-postgres-postgresql
   port: 5432
   name: appdb
   username: appuser

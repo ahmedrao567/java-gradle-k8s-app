@@ -1,0 +1,93 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-schema-init
+  labels:
+    app: {{ .Release.Name }}
+    job: schema-init
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        job: schema-init
+
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: schema-init
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+            - secretRef:
+                name: {{ .Release.Name }}-secret
+
+          # Construct the full psql URL from env vars
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: PGHOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-config
+                  key: DB_HOST
+            - name: PGPORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-config
+                  key: DB_PORT
+            - name: PGDATABASE
+              value: appdb
+
+          # Run the schema SQL script
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for database at $PGHOST:$PGPORT..."
+              until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER"; do
+                echo "Database is unavailable, sleeping 2s..."
+                sleep 2
+              done
+
+              echo "Database is ready. Applying schema..."
+
+              psql << 'EOF'
+              CREATE TABLE IF NOT EXISTS messages (
+                  id BIGSERIAL PRIMARY KEY,
+                  content TEXT NOT NULL,
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+              );
+
+              GRANT ALL PRIVILEGES ON TABLE messages TO "$PGUSER$";
+              GRANT USAGE, SELECT ON SEQUENCE messages_id_seq TO "$PGUSER$";
+
+              \dt messages
+              EOF
+
+              if [ $? -eq 0 ]; then
+                echo "Schema initialized successfully."
+              else
+                echo "Schema initialization failed."
+                exit 1
+              fi
