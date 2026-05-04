@@ -8,4 +8,4 @@ database:
   port: 5432
   name: appdb
   username: appuser
-  password: apppassword
+  password: 1234

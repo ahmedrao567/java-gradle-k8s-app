@@ -1,6 +1,6 @@
 auth:
   username: appuser
-  password: apppassword
+  password: 1234
   database: appdb
 
 primary:

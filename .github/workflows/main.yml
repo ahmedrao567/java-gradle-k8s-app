@@ -102,6 +102,7 @@ jobs:
           helm repo update
           helm upgrade --install my-postgres bitnami/postgresql \
             -n ${{ env.K8S_NAMESPACE }} --create-namespace \
+            --set-string auth.password="$DB_PASSWORD" \
             --set-string auth.postgresPassword="$DB_PASSWORD" \
             --set-string auth.username="appuser" \
             --set-string auth.database="appdb"
