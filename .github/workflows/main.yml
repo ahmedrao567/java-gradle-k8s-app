@@ -65,9 +65,11 @@ jobs:
       # 6. Setup kubeconfig (connect to Azure k3s)
       # -------------------------
       - name: Setup kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_CONTENT }}" > ~/.kube/config
+          echo "$KUBE_CONFIG_DATA" > ~/.kube/config
           chmod 600 ~/.kube/config
           kubectl cluster-info
 
