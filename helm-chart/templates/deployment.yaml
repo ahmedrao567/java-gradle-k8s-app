@@ -4,16 +4,24 @@ metadata:
   name: {{ .Release.Name }}
   labels:
     app: {{ .Release.Name }}
+
 spec:
   replicas: {{ .Values.replicaCount }}
+
   selector:
     matchLabels:
       app: {{ .Release.Name }}
+
   template:
     metadata:
       labels:
         app: {{ .Release.Name }}
+
     spec:
+
+      # -------------------
+      # INIT CONTAINER (WAIT FOR POSTGRES)
+      # -------------------
       initContainers:
         - name: wait-for-postgres
           image: busybox:1.36
@@ -23,28 +31,46 @@ spec:
           command:
             - sh
             - -c
-            - >-
+            - >
               until nc -z "$DB_HOST" "$DB_PORT";
               do echo "waiting for postgres"; sleep 2; done
+
+      # -------------------
+      # MAIN CONTAINER
+      # -------------------
       containers:
         - name: {{ .Release.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+
           envFrom:
             - configMapRef:
                 name: {{ .Release.Name }}-config
             - secretRef:
                 name: {{ .Release.Name }}-secret
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8081
-            initialDelaySeconds: 20
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8081
-            initialDelaySeconds: 10
-            periodSeconds: 5
+
           ports:
             - containerPort: 8081
+
+          # -------------------
+          # LIVENESS PROBE (APP IS ALIVE)
+          # -------------------
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          # -------------------
+          # READINESS PROBE (APP READY TO SERVE TRAFFIC)
+          # -------------------
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
