@@ -71,7 +71,8 @@ jobs:
           mkdir -p ~/.kube
           echo "$KUBE_CONFIG_DATA" > ~/.kube/config
           chmod 600 ~/.kube/config
-          kubectl cluster-info
+          kubectl config set-cluster default --insecure-skip-tls-verify=true
+          kubectl get nodes
 
       # -------------------------
       # 7. Deploy PostgreSQL with Helm
