@@ -1,4 +1,4 @@
-name: Simple Java CI/CD (Azure k3s)
+name: Simple Java CI/CD
 
 on:
   push:
@@ -16,7 +16,7 @@ env:
 jobs:
   pipeline:
     name: Run CI/CD Pipeline
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
 
     steps:
       # -------------------------
@@ -62,45 +62,48 @@ jobs:
             ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
 
       # -------------------------
-      # 6. Install kubectl + helm
-      # -------------------------
-      - name: Install kubectl
-        run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/
-
-      - name: Install Helm
-        run: |
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-      # -------------------------
-      # 7. Setup kubeconfig (Azure access)
+      # 6. Setup kubeconfig (connect to Azure k3s)
       # -------------------------
       - name: Setup kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          echo "${{ secrets.KUBECONFIG_CONTENT }}" > ~/.kube/config
           chmod 600 ~/.kube/config
+          kubectl cluster-info
 
       # -------------------------
-      # 8. Deploy PostgreSQL
+      # 7. Deploy PostgreSQL with Helm
       # -------------------------
-      - name: Deploy PostgreSQL
+      - name: Deploy PostgreSQL with Helm
         run: |
-          helm upgrade --install postgres ${{ env.HELM_CHART_DIR }} \
-            -f ${{ env.HELM_CHART_DIR }}/postgres-values.yaml \
-            -n ${{ env.K8S_NAMESPACE }} --create-namespace
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+          helm upgrade --install my-postgres bitnami/postgresql \
+            -n ${{ env.K8S_NAMESPACE }} --create-namespace \
+            --set auth.postgresPassword=${{ secrets.DB_PASSWORD }},auth.username=appuser,auth.database=appdb
 
       # -------------------------
-      # 9. Deploy Spring Boot App
+      # 8. Deploy Spring Boot App
       # -------------------------
       - name: Deploy Spring Boot App
         run: |
           helm upgrade --install ${{ env.HELM_RELEASE }} ${{ env.HELM_CHART_DIR }} \
             --set image.repository=${{ env.DOCKER_IMAGE }} \
             --set image.tag=${{ github.sha }} \
+            --set database.host=my-postgres-postgresql \
+            --set database.port=5432 \
+            --set database.name=appdb \
+            --set database.username=appuser \
+            --set database.password=${{ secrets.DB_PASSWORD }} \
             -n ${{ env.K8S_NAMESPACE }} --create-namespace
+
+      # -------------------------
+      # 9. Verify deployment
+      # -------------------------
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n ${{ env.K8S_NAMESPACE }}
+          kubectl get svc -n ${{ env.K8S_NAMESPACE }}
 
       # -------------------------
       # 10. Cleanup
