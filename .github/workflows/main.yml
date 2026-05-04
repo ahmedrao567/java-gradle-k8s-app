@@ -64,7 +64,7 @@ jobs:
       # -------------------------
       # 6. Setup kubeconfig (connect to Azure k3s)
       # -------------------------
-      - name: Setup kubeconfig
+      - name: Setup kubeconfigg
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
         run: |
