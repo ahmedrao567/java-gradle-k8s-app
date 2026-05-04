@@ -71,9 +71,9 @@ jobs:
 
       - name: Deploy PostgreSQL with Helm
         run: |
-          ssh ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} 'mkdir -p /tmp/helm-deployment'
-          scp -r ${{ env.HELM_CHART_DIR }} ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }}:/tmp/helm-deployment/
-          ssh ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} << 'EOF'
+          ssh -i ~/.ssh/id_ed25519 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} 'mkdir -p /tmp/helm-deployment'
+          scp -i ~/.ssh/id_ed25519 -r ${{ env.HELM_CHART_DIR }} ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }}:/tmp/helm-deployment/
+          ssh -i ~/.ssh/id_ed25519 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} << 'EOF'
           /Users/airao/.rd/bin/helm upgrade --install postgres /tmp/helm-deployment/helm-chart \
             -f /tmp/helm-deployment/helm-chart/postgres-values.yaml \
             -n ${{ env.K8S_NAMESPACE }} \
@@ -82,7 +82,7 @@ jobs:
 
       - name: Deploy app with Helm
         run: |
-          ssh ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} << 'EOF'
+          ssh -i ~/.ssh/id_ed25519 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} << 'EOF'
           /Users/airao/.rd/bin/helm upgrade --install ${{ env.HELM_RELEASE }} /tmp/helm-deployment/helm-chart \
             --set image.tag=${{ github.sha }} \
             -n ${{ env.K8S_NAMESPACE }} \
