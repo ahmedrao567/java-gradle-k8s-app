@@ -1,10 +1,11 @@
-name: Build and Deploy
+name: Simple Java CI/CD
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 env:
   DOCKER_IMAGE: ahmedikram567/java-gradle-k8s-app
@@ -13,89 +14,70 @@ env:
   K8S_NAMESPACE: default
   REMOTE_HOST: 192.168.18.135
   REMOTE_USER: airao
+  REMOTE_CHART_DIR: /tmp/helm-deployment/helm-chart
+  HELM_BIN: /Users/airao/.rd/bin/helm
 
 jobs:
-  build-and-test:
+  pipeline:
+    name: Run CI/CD Pipeline
     runs-on: [self-hosted]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
 
-      - name: Set up Java 21
-        uses: actions/setup-java@v3
+    steps:
+      - name: 1) Checkout code
+        uses: actions/checkout@v4
+
+      - name: 2) Setup Java 21
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: 3) Build and test
+        run: ./gradlew clean build test
 
-      - name: Run tests
-        run: ./gradlew test
-
-  docker-build-push:
-    needs: build-and-test
-    runs-on: [self-hosted]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+      - name: 4) Login to Docker Hub (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+      - name: 5) Build and push Docker image (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ${{ env.DOCKER_IMAGE }}:latest,${{ env.DOCKER_IMAGE }}:${{ github.sha }}
 
-  deploy:
-    needs: docker-build-push
-    runs-on: [self-hosted]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup SSH
+      - name: 6) Setup SSH key for deploy (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ env.REMOTE_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy PostgreSQL with Helm
+      - name: 7) Copy Helm chart to remote host (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} 'mkdir -p /tmp/helm-deployment'
-          scp -i ~/.ssh/id_ed25519 -r ${{ env.HELM_CHART_DIR }} ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }}:/tmp/helm-deployment/
-          ssh -i ~/.ssh/id_ed25519 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} << 'EOF'
-          /Users/airao/.rd/bin/helm upgrade --install postgres /tmp/helm-deployment/helm-chart \
-            -f /tmp/helm-deployment/helm-chart/postgres-values.yaml \
-            -n ${{ env.K8S_NAMESPACE }} \
-            --create-namespace
-          EOF
+          ssh -i ~/.ssh/id_ed25519 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} 'mkdir -p /tmp/helm-deployment'
+          scp -i ~/.ssh/id_ed25519 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -r ${{ env.HELM_CHART_DIR }} ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }}:/tmp/helm-deployment/
 
-      - name: Deploy app with Helm
+      - name: 8) Deploy PostgreSQL with Helm (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} << 'EOF'
-          /Users/airao/.rd/bin/helm upgrade --install ${{ env.HELM_RELEASE }} /tmp/helm-deployment/helm-chart \
-            --set image.tag=${{ github.sha }} \
-            -n ${{ env.K8S_NAMESPACE }} \
-            --create-namespace
-          EOF
+          ssh -i ~/.ssh/id_ed25519 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} "${{ env.HELM_BIN }} upgrade --install postgres ${{ env.REMOTE_CHART_DIR }} -f ${{ env.REMOTE_CHART_DIR }}/postgres-values.yaml -n ${{ env.K8S_NAMESPACE }} --create-namespace"
 
-      - name: Cleanup SSH key
-        if: always()
-        run: rm -f ~/.ssh/id_ed25519
+      - name: 9) Deploy app with Helm (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} "${{ env.HELM_BIN }} upgrade --install ${{ env.HELM_RELEASE }} ${{ env.REMOTE_CHART_DIR }} --set image.tag=${{ github.sha }} -n ${{ env.K8S_NAMESPACE }} --create-namespace"
 
-      - name: Cleanup Docker resources
+      - name: 10) Cleanup runner (always)
         if: always()
         run: |
+          rm -f ~/.ssh/id_ed25519
           docker container prune -f
           docker image prune -af
           docker network prune -f
