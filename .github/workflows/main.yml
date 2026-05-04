@@ -90,3 +90,10 @@ jobs:
       - name: Cleanup SSH key
         if: always()
         run: rm -f ~/.ssh/id_ed25519
+
+      - name: Cleanup Docker resources
+        if: always()
+        run: |
+          docker container prune -f
+          docker image prune -af
+          docker network prune -f
