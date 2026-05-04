@@ -95,17 +95,23 @@ jobs:
       # 7. Deploy PostgreSQL with Helm
       # -------------------------
       - name: Deploy PostgreSQL with Helm
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update
           helm upgrade --install my-postgres bitnami/postgresql \
             -n ${{ env.K8S_NAMESPACE }} --create-namespace \
-            --set auth.postgresPassword=${{ secrets.DB_PASSWORD }},auth.username=appuser,auth.database=appdb
+            --set-string auth.postgresPassword="$DB_PASSWORD" \
+            --set-string auth.username="appuser" \
+            --set-string auth.database="appdb"
 
       # -------------------------
       # 8. Deploy Spring Boot App
       # -------------------------
       - name: Deploy Spring Boot App
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           helm upgrade --install ${{ env.HELM_RELEASE }} ${{ env.HELM_CHART_DIR }} \
             --set image.repository=${{ env.DOCKER_IMAGE }} \
@@ -114,7 +120,7 @@ jobs:
             --set database.port=5432 \
             --set database.name=appdb \
             --set database.username=appuser \
-            --set database.password=${{ secrets.DB_PASSWORD }} \
+            --set-string database.password="$DB_PASSWORD" \
             -n ${{ env.K8S_NAMESPACE }} --create-namespace
 
       # -------------------------
