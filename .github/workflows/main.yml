@@ -35,6 +35,14 @@ jobs:
           distribution: 'temurin'
 
       # -------------------------
+      # 2.1 Install Helm
+      # -------------------------
+      - name: Install Helm
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
+      # -------------------------
       # 3. Build + Test
       # -------------------------
       - name: Build and test
@@ -64,7 +72,7 @@ jobs:
       # -------------------------
       # 6. Setup kubeconfig (connect to Azure k3s)
       # -------------------------
-      - name: Setup kubeconfigg
+      - name: Setup kubeconfig
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
         run: |
@@ -73,6 +81,15 @@ jobs:
           chmod 600 ~/.kube/config
           kubectl config set-cluster default --insecure-skip-tls-verify=true
           kubectl get nodes
+
+      - name: Validate DB password secret
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          if [ -z "$DB_PASSWORD" ]; then
+            echo "DB_PASSWORD secret is missing or empty. Set it in GitHub Actions secrets."
+            exit 1
+          fi
 
       # -------------------------
       # 7. Deploy PostgreSQL with Helm
