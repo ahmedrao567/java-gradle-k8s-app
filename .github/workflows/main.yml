@@ -1,4 +1,4 @@
-name: Simple Java CI/CD
+name: Simple Java CI/CD (Azure k3s)
 
 on:
   push:
@@ -12,72 +12,100 @@ env:
   HELM_RELEASE: java-gradle-k8s-app
   HELM_CHART_DIR: ./helm-chart
   K8S_NAMESPACE: default
-  REMOTE_HOST: 192.168.18.135
-  REMOTE_USER: airao
-  REMOTE_CHART_DIR: /tmp/helm-deployment/helm-chart
-  HELM_BIN: /Users/airao/.rd/bin/helm
 
 jobs:
   pipeline:
     name: Run CI/CD Pipeline
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
 
     steps:
-      - name: 1) Checkout code
+      # -------------------------
+      # 1. Checkout code
+      # -------------------------
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 2) Setup Java 21
+      # -------------------------
+      # 2. Setup Java
+      # -------------------------
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: 3) Build and test
+      # -------------------------
+      # 3. Build + Test
+      # -------------------------
+      - name: Build and test
         run: ./gradlew clean build test
 
-      - name: 4) Login to Docker Hub (main only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # -------------------------
+      # 4. Docker login
+      # -------------------------
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: 5) Build and push Docker image (main only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # -------------------------
+      # 5. Build + Push Image
+      # -------------------------
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ env.DOCKER_IMAGE }}:latest,${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
 
-      - name: 6) Setup SSH key for deploy (main only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # -------------------------
+      # 6. Install kubectl + helm
+      # -------------------------
+      - name: Install kubectl
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ env.REMOTE_HOST }} >> ~/.ssh/known_hosts
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
 
-      - name: 7) Copy Helm chart to remote host (main only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Install Helm
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} 'mkdir -p /tmp/helm-deployment'
-          scp -i ~/.ssh/id_ed25519 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -r ${{ env.HELM_CHART_DIR }} ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }}:/tmp/helm-deployment/
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      - name: 8) Deploy PostgreSQL with Helm (main only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # -------------------------
+      # 7. Setup kubeconfig (Azure access)
+      # -------------------------
+      - name: Setup kubeconfig
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} "${{ env.HELM_BIN }} upgrade --install postgres ${{ env.REMOTE_CHART_DIR }} -f ${{ env.REMOTE_CHART_DIR }}/postgres-values.yaml -n ${{ env.K8S_NAMESPACE }} --create-namespace"
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
 
-      - name: 9) Deploy app with Helm (main only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # -------------------------
+      # 8. Deploy PostgreSQL
+      # -------------------------
+      - name: Deploy PostgreSQL
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 ${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }} "${{ env.HELM_BIN }} upgrade --install ${{ env.HELM_RELEASE }} ${{ env.REMOTE_CHART_DIR }} --set image.tag=${{ github.sha }} -n ${{ env.K8S_NAMESPACE }} --create-namespace"
+          helm upgrade --install postgres ${{ env.HELM_CHART_DIR }} \
+            -f ${{ env.HELM_CHART_DIR }}/postgres-values.yaml \
+            -n ${{ env.K8S_NAMESPACE }} --create-namespace
 
-      - name: 10) Cleanup runner (always)
+      # -------------------------
+      # 9. Deploy Spring Boot App
+      # -------------------------
+      - name: Deploy Spring Boot App
+        run: |
+          helm upgrade --install ${{ env.HELM_RELEASE }} ${{ env.HELM_CHART_DIR }} \
+            --set image.repository=${{ env.DOCKER_IMAGE }} \
+            --set image.tag=${{ github.sha }} \
+            -n ${{ env.K8S_NAMESPACE }} --create-namespace
+
+      # -------------------------
+      # 10. Cleanup
+      # -------------------------
+      - name: Cleanup
         if: always()
         run: |
-          rm -f ~/.ssh/id_ed25519
-          docker container prune -f
-          docker image prune -af
-          docker network prune -f
+          docker system prune -af
