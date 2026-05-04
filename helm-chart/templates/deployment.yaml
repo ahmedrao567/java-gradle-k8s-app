@@ -35,9 +35,6 @@ spec:
               until nc -z "$DB_HOST" "$DB_PORT";
               do echo "waiting for postgres"; sleep 2; done
 
-      # -------------------
-      # MAIN CONTAINER
-      # -------------------
       containers:
         - name: {{ .Release.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -52,25 +49,36 @@ spec:
             - containerPort: 8081
 
           # -------------------
-          # LIVENESS PROBE (APP IS ALIVE)
+          # STARTUP PROBE (IMPORTANT FIX)
+          # prevents crash loops during boot
+          # -------------------
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            failureThreshold: 30
+            periodSeconds: 10
+
+          # -------------------
+          # LIVENESS PROBE (IS APP ALIVE?)
           # -------------------
           livenessProbe:
             httpGet:
               path: /actuator/health
               port: 8081
-            initialDelaySeconds: 40
+            initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 2
-            failureThreshold: 3
+            failureThreshold: 5
 
           # -------------------
-          # READINESS PROBE (APP READY TO SERVE TRAFFIC)
+          # READINESS PROBE (CAN SERVE TRAFFIC?)
           # -------------------
           readinessProbe:
             httpGet:
               path: /actuator/health
               port: 8081
-            initialDelaySeconds: 20
+            initialDelaySeconds: 30
             periodSeconds: 5
             timeoutSeconds: 2
-            failureThreshold: 3
+            failureThreshold: 5
