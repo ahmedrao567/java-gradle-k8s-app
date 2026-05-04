@@ -48,16 +48,7 @@ spec:
           ports:
             - containerPort: 8081
 
-          # -------------------
-          # STARTUP PROBE (IMPORTANT FIX)
-          # prevents crash loops during boot
-          # -------------------
-          startupProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8081
-            failureThreshold: 30
-            periodSeconds: 10
+    
 
           # -------------------
           # LIVENESS PROBE (IS APP ALIVE?)
@@ -66,7 +57,7 @@ spec:
             httpGet:
               path: /actuator/health
               port: 8081
-            initialDelaySeconds: 60
+            initialDelaySeconds: 90
             periodSeconds: 15
             timeoutSeconds: 3
             failureThreshold: 5
@@ -78,7 +69,7 @@ spec:
             httpGet:
               path: /actuator/health
               port: 8081
-            initialDelaySeconds: 40
+            initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 5
