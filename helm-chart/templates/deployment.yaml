@@ -19,9 +19,6 @@ spec:
 
     spec:
 
-      # -------------------
-      # INIT CONTAINER (WAIT FOR POSTGRES)
-      # -------------------
       initContainers:
         - name: wait-for-postgres
           image: busybox:1.36
@@ -48,11 +45,6 @@ spec:
           ports:
             - containerPort: 8081
 
-    
-
-          # -------------------
-          # LIVENESS PROBE (IS APP ALIVE?)
-          # -------------------
           livenessProbe:
             httpGet:
               path: /actuator/health
@@ -62,9 +54,6 @@ spec:
             timeoutSeconds: 3
             failureThreshold: 5
 
-          # -------------------
-          # READINESS PROBE (CAN SERVE TRAFFIC?)
-          # -------------------
           readinessProbe:
             httpGet:
               path: /actuator/health

@@ -10,6 +10,6 @@ spec:
     app: {{ .Release.Name }}
   ports:
     - name: http
-      port: 80          
-      targetPort: 8081   
+      port: 80
+      targetPort: 8081
       protocol: TCP
