@@ -90,10 +90,6 @@ jobs:
           helm upgrade --install ${{ env.HELM_RELEASE }} ${{ env.HELM_CHART_DIR }} \
             --set image.repository=${{ env.DOCKER_IMAGE }} \
             --set image.tag=${{ github.sha }} \
-            --set database.host=my-postgres-postgresql \
-            --set database.port=5432 \
-            --set database.name=appdb \
-            --set database.username=appuser \
             --set-string database.password="$DB_PASSWORD" \
             -n ${{ env.K8S_NAMESPACE }} --create-namespace
 
